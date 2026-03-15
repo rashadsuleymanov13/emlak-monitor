@@ -26,8 +26,8 @@ def make_listing(**kwargs) -> Listing:
         "title": "3 otaqlı mənzil Nərimanov rayonu",
         "price": 175000,
         "area": 75.0,
-        "floor": 8,
-        "total_floors": 16,
+        "floor": 3,
+        "total_floors": 5,
         "location": "Nərimanov",
         "description": "Kupça var, ipotekaya yararlı",
         "has_title_deed": True,
@@ -91,24 +91,28 @@ class TestAreaFilter:
 
 
 class TestFloorFilter:
-    def test_excludes_5_floor_building(self, cfg):
-        listing = make_listing(total_floors=5)
-        assert passes_floor_filter(listing, cfg) is False
-
-    def test_excludes_26_floor_building(self, cfg):
-        listing = make_listing(total_floors=26)
-        assert passes_floor_filter(listing, cfg) is False
-
-    def test_allows_6_floor_building(self, cfg):
+    def test_excludes_6_floor_building(self, cfg):
         listing = make_listing(total_floors=6)
-        assert passes_floor_filter(listing, cfg) is True
+        assert passes_floor_filter(listing, cfg) is False
 
-    def test_allows_25_floor_building(self, cfg):
-        listing = make_listing(total_floors=25)
-        assert passes_floor_filter(listing, cfg) is True
-
-    def test_allows_16_floor_building(self, cfg):
+    def test_excludes_16_floor_building(self, cfg):
         listing = make_listing(total_floors=16)
+        assert passes_floor_filter(listing, cfg) is False
+
+    def test_excludes_25_floor_building(self, cfg):
+        listing = make_listing(total_floors=25)
+        assert passes_floor_filter(listing, cfg) is False
+
+    def test_allows_5_floor_building(self, cfg):
+        listing = make_listing(total_floors=5)
+        assert passes_floor_filter(listing, cfg) is True
+
+    def test_allows_3_floor_building(self, cfg):
+        listing = make_listing(total_floors=3)
+        assert passes_floor_filter(listing, cfg) is True
+
+    def test_allows_26_floor_building(self, cfg):
+        listing = make_listing(total_floors=26)
         assert passes_floor_filter(listing, cfg) is True
 
     def test_none_floors_passes(self, cfg):

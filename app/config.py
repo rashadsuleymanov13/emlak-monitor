@@ -12,7 +12,7 @@ class Config:
     area_max: int = 90
     exclude_total_floors: List[int] = field(default_factory=lambda: [5])
     require_title_deed: bool = True
-    require_mortgage_ready: bool = True
+    require_mortgage_ready: bool = False
     target_locations: List[str] = field(default_factory=lambda: [
         "Təbriz küçəsi",
         "Çapayev",

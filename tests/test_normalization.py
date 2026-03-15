@@ -60,7 +60,27 @@ class TestMatchesLocation:
         cfg = Config()
         assert matches_location("Atatürk parkı", cfg.target_locations) is True
         assert matches_location("Ataturk parki", cfg.target_locations) is True
-        assert matches_location("Ata turk", cfg.target_locations) is False  # too fragmented
+        assert matches_location("Ata turk", cfg.target_locations) is True
+
+    def test_xalqlar_dostlugu(self):
+        cfg = Config()
+        assert matches_location("Xalqlar dostluğu metrosu", cfg.target_locations) is True
+        assert matches_location("xalqlar dostlugu", cfg.target_locations) is True
+
+    def test_elmler_akademiyasi(self):
+        cfg = Config()
+        assert matches_location("Elmlər Akademiyası m.", cfg.target_locations) is True
+        assert matches_location("elmler akademiyasi", cfg.target_locations) is True
+
+    def test_demircizade(self):
+        cfg = Config()
+        assert matches_location("Dəmirçizadə küçəsi", cfg.target_locations) is True
+        assert matches_location("Demircizade", cfg.target_locations) is True
+
+    def test_serq_bazari(self):
+        cfg = Config()
+        assert matches_location("Şərq bazarı yaxınlığı", cfg.target_locations) is True
+        assert matches_location("serq bazari", cfg.target_locations) is True
 
     def test_no_match(self):
         cfg = Config()

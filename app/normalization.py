@@ -24,15 +24,40 @@ _TRANSLIT_MAP = {
 
 # Location name variants for matching
 LOCATION_VARIANTS: List[Tuple[str, List[str]]] = [
-    ("təbriz küçəsi", ["tebriz", "tabriz", "təbriz"]),
-    ("çapayev", ["chapayev", "capayev", "çapayev", "chapayev"]),
-    ("nərimanov", ["nerimanov", "narimanov", "nərimanov"]),
+    # Metro stansiyaları
+    ("xalqlar dostluğu", [
+        "xalqlar dostlugu", "xalqlar dostluğu",
+        "xalqlar", "dostluq", "dostlugu",
+    ]),
+    ("qara qarayev", [
+        "qara qarayev", "qarayev", "gara garayev", "qarayev m.",
+    ]),
+    ("nəriman nərimanov", [
+        "nerimanov", "narimanov", "nərimanov", "neriman nerimanov",
+        "nəriman nərimanov", "n.nərimanov",
+    ]),
     ("gənclik", ["genclik", "ganclik", "gənclik"]),
-    ("qara qarayev", ["qara qarayev", "qarayev", "gara garayev"]),
-    ("ayna sultanov", ["ayna sultanova", "ayna sultanov"]),
-    ("atatürk parkı ətrafı", [
+    ("elmlər akademiyası", [
+        "elmler akademiyasi", "elmlər akademiyası",
+        "elmler", "akademiya",
+    ]),
+    # Küçə / məhəllə / landmark
+    ("təbriz küçəsi", ["tebriz", "tabriz", "təbriz"]),
+    ("çapayev", ["chapayev", "capayev", "çapayev"]),
+    ("ayna sultanova", [
+        "ayna sultanova", "ayna sultanov", "sultanova",
+    ]),
+    ("atatürk parkı", [
         "ataturk", "atatürk", "ata turk", "ata türk",
         "ataturk parki", "atatürk parkı",
+    ]),
+    ("əbdüləzəl dəmirçizadə", [
+        "demircizade", "dəmirçizadə", "demirchizade",
+        "abdulezal", "əbdüləzəl",
+    ]),
+    ("şərq bazarı", [
+        "serq bazari", "şərq bazarı", "şərq bazar",
+        "serq bazar", "sharq bazar",
     ]),
 ]
 

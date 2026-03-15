@@ -14,13 +14,19 @@ class Config:
     require_title_deed: bool = True
     require_mortgage_ready: bool = False
     target_locations: List[str] = field(default_factory=lambda: [
+        # Metro stansiyaları
+        "Xalqlar dostluğu",
+        "Qara Qarayev",
+        "Nəriman Nərimanov",
+        "Gənclik",
+        "Elmlər Akademiyası",
+        # Küçə / məhəllə / landmark
         "Təbriz küçəsi",
         "Çapayev",
-        "Nərimanov",
-        "Gənclik",
-        "Qara Qarayev",
-        "Ayna Sultanov",
-        "Atatürk parkı ətrafı",
+        "Ayna Sultanova",
+        "Atatürk parkı",
+        "Əbdüləzəl Dəmirçizadə",
+        "Şərq bazarı",
     ])
     ntfy_topic: str = "rs-emlak"
     ntfy_url: str = "https://ntfy.sh"

@@ -43,50 +43,29 @@ PRICE_DISCOVERY_QUERY = """
 { __type(name: "ESPrice") { fields { name type { name kind ofType { name } } } } }
 """
 
-# Multiple query variants - based on error feedback from bina.az
-# Known: ItemFilter is correct type, ESItem has no 'slug', categoryId is ID type
+# GraphQL query - confirmed working with bina.az API
+# ESItem fields: id, price{value,currency}, area{value}, location{name}
+# ESItem does NOT have: slug, roomCount, floor, allFloor, hasDocuments, hasMortgage
 QUERY_VARIANTS = [
-    # Variant 1: ItemFilter + no slug + ID types
-    {
-        "query": """
-query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
-  itemsConnection(filter: $filter, first: $first, after: $after) {
-    totalCount
-    edges {
-      node {
-        id price { value currency } area { value }
-        hasDocuments hasMortgage
-        city { name } location { name }
-      }
-    }
-  }
-}""",
-        "variables": {
-            "filter": {"categoryId": "2", "leased": False, "cityId": "1"},
-            "first": 50,
-        },
-    },
-    # Variant 2: With additional common fields
+    # Primary: Working query with location (for filtering)
     {
         "query": """
 query GetItems($filter: ItemFilter!, $first: Int) {
   itemsConnection(filter: $filter, first: $first) {
-    totalCount
     edges {
       node {
         id price { value currency } area { value }
-        hasDocuments hasMortgage
         location { name }
       }
     }
   }
 }""",
         "variables": {
-            "filter": {"categoryId": "2", "leased": False, "cityId": "1"},
-            "first": 50,
+            "filter": {"categoryId": "2", "leased": False},
+            "first": 100,
         },
     },
-    # Variant 3: Minimal fields
+    # Fallback: Minimal (no location, in case location causes issues)
     {
         "query": """
 query GetItems($filter: ItemFilter!, $first: Int) {
@@ -100,18 +79,8 @@ query GetItems($filter: ItemFilter!, $first: Int) {
 }""",
         "variables": {
             "filter": {"categoryId": "2", "leased": False},
-            "first": 30,
+            "first": 100,
         },
-    },
-    # Variant 4: categoryId as ID scalar
-    {
-        "query": """
-query($categoryId: ID, $leased: Boolean, $first: Int) {
-  itemsConnection(filter: {categoryId: $categoryId, leased: $leased}, first: $first) {
-    edges { node { id price { value currency } area { value } hasDocuments hasMortgage location { name } } }
-  }
-}""",
-        "variables": {"categoryId": "2", "leased": False, "first": 50},
     },
 ]
 

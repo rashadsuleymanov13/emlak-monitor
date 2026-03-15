@@ -6,7 +6,8 @@ from app.adapters.vipemlak_az import VipemlakAzAdapter
 from app.adapters.evv_az import EvvAzAdapter
 from app.adapters.emlakbazari_az import EmlakbazariAzAdapter
 from app.adapters.binam_az import BinamAzAdapter
-from app.adapters.ebaz_az import EbazAzAdapter
+# ebaz.az is a pure React SPA with no accessible API — disabled until they add SSR or a public API
+# from app.adapters.ebaz_az import EbazAzAdapter
 
 ALL_ADAPTERS = [
     BinaAzAdapter,
@@ -17,5 +18,4 @@ ALL_ADAPTERS = [
     EvvAzAdapter,
     EmlakbazariAzAdapter,
     BinamAzAdapter,
-    EbazAzAdapter,
 ]

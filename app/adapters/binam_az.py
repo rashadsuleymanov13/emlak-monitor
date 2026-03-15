@@ -6,7 +6,7 @@ import time
 from typing import List
 from urllib.parse import urljoin
 
-import httpx
+import cloudscraper
 from bs4 import BeautifulSoup
 
 from app.adapters.base import BaseAdapter
@@ -92,60 +92,47 @@ class BinamAzAdapter(BaseAdapter):
 
     def fetch_listings(self) -> List[Listing]:
         listings = []
-        with httpx.Client(
-            headers={
-                "User-Agent": config.user_agent,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                "Accept-Language": "az,en-US;q=0.7,en;q=0.3",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Referer": "https://binam.az/",
-                "DNT": "1",
-                "Connection": "keep-alive",
-                "Upgrade-Insecure-Requests": "1",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "same-origin",
-            },
-            follow_redirects=True,
-        ) as client:
-            for page in range(1, 4):
-                url = f"{self.base_url}/items?item_type_id=1&estate_type_id=1&page={page}"
-                logger.info(f"Fetching {url}")
-                try:
-                    resp = client.get(url, timeout=15.0)
-                    resp.raise_for_status()
-                except Exception as e:
-                    logger.error(f"Failed: {e}")
+        scraper = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "linux", "mobile": False},
+        )
+        for page in range(1, 4):
+            url = f"{self.base_url}/items?item_type_id=1&estate_type_id=1&page={page}"
+            logger.info(f"Fetching {url}")
+            try:
+                resp = scraper.get(url, timeout=15)
+                resp.raise_for_status()
+            except Exception as e:
+                logger.error(f"Failed: {e}")
+                continue
+
+            soup = BeautifulSoup(resp.text, "lxml")
+
+            # binam.az uses <a href="/items/XXXXX"> as card containers
+            card_links = soup.find_all("a", href=re.compile(r'/items/\d+'))
+            seen_ids = set()
+            for lnk in card_links:
+                href = lnk["href"]
+                id_match = re.search(r'/items/(\d+)', href)
+                lid = id_match.group(1) if id_match else href
+                if lid in seen_ids:
                     continue
+                seen_ids.add(lid)
 
-                soup = BeautifulSoup(resp.text, "lxml")
+                # Use the link itself or walk up
+                container = lnk
+                if len(lnk.get_text(strip=True)) < 10:
+                    for _ in range(3):
+                        if container.parent and container.parent.name not in ("body", "html", "[document]"):
+                            container = container.parent
+                        else:
+                            break
 
-                # binam.az uses <a href="/items/XXXXX"> as card containers
-                card_links = soup.find_all("a", href=re.compile(r'/items/\d+'))
-                seen_ids = set()
-                for lnk in card_links:
-                    href = lnk["href"]
-                    id_match = re.search(r'/items/(\d+)', href)
-                    lid = id_match.group(1) if id_match else href
-                    if lid in seen_ids:
-                        continue
-                    seen_ids.add(lid)
+                listing = self._parse_card(container)
+                if listing and listing.url:
+                    listings.append(listing)
 
-                    # Use the link itself or walk up
-                    container = lnk
-                    if len(lnk.get_text(strip=True)) < 10:
-                        for _ in range(3):
-                            if container.parent and container.parent.name not in ("body", "html", "[document]"):
-                                container = container.parent
-                            else:
-                                break
-
-                    listing = self._parse_card(container)
-                    if listing and listing.url:
-                        listings.append(listing)
-
-                logger.info(f"Page {page}: found {len(seen_ids)} cards")
-                time.sleep(config.request_delay)
+            logger.info(f"Page {page}: found {len(seen_ids)} cards")
+            time.sleep(config.request_delay)
 
         logger.info(f"Total from {self.name}: {len(listings)}")
         return listings

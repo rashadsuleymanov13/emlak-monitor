@@ -35,9 +35,12 @@ INTROSPECTION_QUERY = """
 }
 """
 
-# Field discovery query - find what fields ESItem actually has
+# Field discovery queries
 FIELD_DISCOVERY_QUERY = """
 { __type(name: "ESItem") { fields { name type { name kind ofType { name } } } } }
+"""
+PRICE_DISCOVERY_QUERY = """
+{ __type(name: "ESPrice") { fields { name type { name kind ofType { name } } } } }
 """
 
 # Multiple query variants - based on error feedback from bina.az
@@ -51,7 +54,7 @@ query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
     totalCount
     edges {
       node {
-        id price { amount currency } area floor allFloor roomCount
+        id price { value currency } area floor allFloor roomCount
         hasDocuments hasMortgage
         city { name } location { name }
       }
@@ -71,7 +74,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
     totalCount
     edges {
       node {
-        id price { amount currency } area floor allFloor roomCount
+        id price { value currency } area floor allFloor roomCount
         hasDocuments hasMortgage
         location { name }
       }
@@ -90,7 +93,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
   itemsConnection(filter: $filter, first: $first) {
     edges {
       node {
-        id price { amount currency } area floor allFloor roomCount
+        id price { value currency } area floor allFloor roomCount
       }
     }
   }
@@ -105,7 +108,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
         "query": """
 query($categoryId: ID, $leased: Boolean, $first: Int) {
   itemsConnection(filter: {categoryId: $categoryId, leased: $leased}, first: $first) {
-    edges { node { id price area floor allFloor roomCount hasDocuments hasMortgage location { name } } }
+    edges { node { id price { value currency } area floor allFloor roomCount hasDocuments hasMortgage location { name } } }
   }
 }""",
         "variables": {"categoryId": "2", "leased": False, "first": 50},
@@ -165,21 +168,18 @@ class BinaAzAdapter(BaseAdapter):
         except Exception as e:
             logger.debug(f"Introspection failed: {e}")
 
-        # Discover ESItem fields
-        try:
-            resp = client.post(
-                endpoint,
-                json={"query": FIELD_DISCOVERY_QUERY},
-                timeout=10.0,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                item_type = data.get("data", {}).get("__type")
-                if item_type and item_type.get("fields"):
-                    field_names = [f["name"] for f in item_type["fields"]]
-                    logger.info(f"ESItem fields: {field_names}")
-        except Exception as e:
-            logger.debug(f"Field discovery failed: {e}")
+        # Discover ESItem and ESPrice fields
+        for type_name, query in [("ESItem", FIELD_DISCOVERY_QUERY), ("ESPrice", PRICE_DISCOVERY_QUERY)]:
+            try:
+                resp = client.post(endpoint, json={"query": query}, timeout=10.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    t = data.get("data", {}).get("__type")
+                    if t and t.get("fields"):
+                        names = [f["name"] for f in t["fields"]]
+                        logger.info(f"{type_name} fields: {names}")
+            except Exception:
+                pass
 
     def _parse_graphql_nodes(self, data: dict) -> List[Listing]:
         """Parse listing nodes from any GraphQL response shape."""
@@ -240,12 +240,13 @@ class BinaAzAdapter(BaseAdapter):
             if not title and node.get("roomCount") and node.get("area"):
                 title = f"{node['roomCount']} otaqlı, {node['area']} m²"
 
-            # Parse price - can be scalar or object {amount, currency}
+            # Parse price - can be scalar or object {value/amount, currency}
             price_val = node.get("price")
             price = None
             currency = "AZN"
             if isinstance(price_val, dict):
-                price = safe_int(str(price_val.get("amount", ""))) if price_val.get("amount") else None
+                raw = price_val.get("value") or price_val.get("amount") or price_val.get("price")
+                price = safe_int(str(raw)) if raw else None
                 currency = price_val.get("currency", "AZN")
             elif price_val is not None:
                 price = safe_int(str(price_val))

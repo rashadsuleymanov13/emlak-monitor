@@ -35,29 +35,15 @@ INTROSPECTION_QUERY = """
 }
 """
 
-# Multiple query variants to try - bina.az schema may vary
+# Field discovery query - find what fields ESItem actually has
+FIELD_DISCOVERY_QUERY = """
+{ __type(name: "ESItem") { fields { name type { name kind ofType { name } } } } }
+"""
+
+# Multiple query variants - based on error feedback from bina.az
+# Known: ItemFilter is correct type, ESItem has no 'slug', categoryId is ID type
 QUERY_VARIANTS = [
-    # Variant 1: Connection pattern with ESItemFilter
-    {
-        "query": """
-query GetItems($filter: ESItemFilter!, $first: Int, $after: String) {
-  itemsConnection(filter: $filter, first: $first, after: $after) {
-    totalCount
-    edges {
-      node {
-        id slug price currency area floor allFloor roomCount
-        hasDocuments hasMortgage
-        city { name } location { name }
-      }
-    }
-  }
-}""",
-        "variables": {
-            "filter": {"categoryId": "2", "leased": False, "cityId": "1"},
-            "first": 50,
-        },
-    },
-    # Variant 2: ItemFilter type name
+    # Variant 1: ItemFilter + no slug + ID types
     {
         "query": """
 query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
@@ -65,7 +51,7 @@ query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
     totalCount
     edges {
       node {
-        id slug price currency area floor allFloor roomCount
+        id price currency area floor allFloor roomCount
         hasDocuments hasMortgage
         city { name } location { name }
       }
@@ -77,23 +63,52 @@ query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
             "first": 50,
         },
     },
-    # Variant 3: Simpler items query
+    # Variant 2: With additional common fields
     {
         "query": """
-query { items(categoryId: 2, leased: false, cityId: 1, first: 50) {
-    id slug price area floor allFloor roomCount location { name }
-} }""",
-        "variables": {},
-    },
-    # Variant 4: String category with connection
-    {
-        "query": """
-query($categoryId: String, $leased: Boolean, $cityId: String, $first: Int) {
-  itemsConnection(filter: {categoryId: $categoryId, leased: $leased, cityId: $cityId}, first: $first) {
-    edges { node { id slug price area floor allFloor roomCount hasDocuments hasMortgage location { name } } }
+query GetItems($filter: ItemFilter!, $first: Int) {
+  itemsConnection(filter: $filter, first: $first) {
+    totalCount
+    edges {
+      node {
+        id price area floor allFloor roomCount
+        hasDocuments hasMortgage
+        location { name }
+      }
+    }
   }
 }""",
-        "variables": {"categoryId": "2", "leased": False, "cityId": "1", "first": 50},
+        "variables": {
+            "filter": {"categoryId": "2", "leased": False, "cityId": "1"},
+            "first": 50,
+        },
+    },
+    # Variant 3: Minimal fields
+    {
+        "query": """
+query GetItems($filter: ItemFilter!, $first: Int) {
+  itemsConnection(filter: $filter, first: $first) {
+    edges {
+      node {
+        id price area floor allFloor roomCount
+      }
+    }
+  }
+}""",
+        "variables": {
+            "filter": {"categoryId": "2", "leased": False},
+            "first": 30,
+        },
+    },
+    # Variant 4: categoryId as ID scalar
+    {
+        "query": """
+query($categoryId: ID, $leased: Boolean, $first: Int) {
+  itemsConnection(filter: {categoryId: $categoryId, leased: $leased}, first: $first) {
+    edges { node { id price area floor allFloor roomCount hasDocuments hasMortgage location { name } } }
+  }
+}""",
+        "variables": {"categoryId": "2", "leased": False, "first": 50},
     },
 ]
 
@@ -150,6 +165,22 @@ class BinaAzAdapter(BaseAdapter):
         except Exception as e:
             logger.debug(f"Introspection failed: {e}")
 
+        # Discover ESItem fields
+        try:
+            resp = client.post(
+                endpoint,
+                json={"query": FIELD_DISCOVERY_QUERY},
+                timeout=10.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                item_type = data.get("data", {}).get("__type")
+                if item_type and item_type.get("fields"):
+                    field_names = [f["name"] for f in item_type["fields"]]
+                    logger.info(f"ESItem fields: {field_names}")
+        except Exception as e:
+            logger.debug(f"Field discovery failed: {e}")
+
     def _parse_graphql_nodes(self, data: dict) -> List[Listing]:
         """Parse listing nodes from any GraphQL response shape."""
         listings = []
@@ -191,8 +222,10 @@ class BinaAzAdapter(BaseAdapter):
                 continue
             listing_id = str(node.get("id", ""))
             slug = node.get("slug", "")
-            url = f"{self.base_url}/{slug}" if slug else (
-                f"{self.base_url}/items/{listing_id}" if listing_id else ""
+            url = (
+                f"{self.base_url}/{slug}" if slug
+                else f"{self.base_url}/items/{listing_id}" if listing_id
+                else ""
             )
 
             location_name = ""
@@ -202,10 +235,15 @@ class BinaAzAdapter(BaseAdapter):
             elif isinstance(loc, str):
                 location_name = loc
 
+            # Build title from available fields
+            title = node.get("title", "") or node.get("name", "") or (slug.replace("-", " ") if slug else "")
+            if not title and node.get("roomCount") and node.get("area"):
+                title = f"{node['roomCount']} otaqlı, {node['area']} m²"
+
             listing = Listing(
                 listing_id=listing_id,
                 url=url,
-                title=slug.replace("-", " ") if slug else "",
+                title=title,
                 price=safe_int(str(node.get("price", ""))) if node.get("price") else None,
                 currency=node.get("currency", "AZN"),
                 area=safe_float(str(node.get("area", ""))) if node.get("area") else None,

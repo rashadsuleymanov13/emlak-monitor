@@ -20,41 +20,82 @@ from app.utils import safe_int, safe_float
 
 logger = logging.getLogger(__name__)
 
-# GraphQL query to fetch listings
-ITEMS_QUERY = """
-query GetItems($filter: ItemFilter!, $first: Int, $after: String, $sort: SortType) {
-  itemsConnection(filter: $filter, first: $first, after: $after, sort: $sort) {
-    totalCount
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    edges {
-      node {
-        id
-        slug
-        price
-        currency
-        area
-        floor
-        allFloor
-        roomCount
-        hasDocuments
-        hasMortgage
-        city {
-          name
-        }
-        location {
-          name
-        }
-        category {
-          name
-        }
+# Introspection query to discover available queries and types
+INTROSPECTION_QUERY = """
+{
+  __schema {
+    queryType {
+      fields {
+        name
+        args { name type { name kind ofType { name } } }
+        type { name kind ofType { name kind ofType { name kind ofType { name } } } }
       }
     }
   }
 }
 """
+
+# Multiple query variants to try - bina.az schema may vary
+QUERY_VARIANTS = [
+    # Variant 1: Connection pattern with ESItemFilter
+    {
+        "query": """
+query GetItems($filter: ESItemFilter!, $first: Int, $after: String) {
+  itemsConnection(filter: $filter, first: $first, after: $after) {
+    totalCount
+    edges {
+      node {
+        id slug price currency area floor allFloor roomCount
+        hasDocuments hasMortgage
+        city { name } location { name }
+      }
+    }
+  }
+}""",
+        "variables": {
+            "filter": {"categoryId": "2", "leased": False, "cityId": "1"},
+            "first": 50,
+        },
+    },
+    # Variant 2: ItemFilter type name
+    {
+        "query": """
+query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
+  itemsConnection(filter: $filter, first: $first, after: $after) {
+    totalCount
+    edges {
+      node {
+        id slug price currency area floor allFloor roomCount
+        hasDocuments hasMortgage
+        city { name } location { name }
+      }
+    }
+  }
+}""",
+        "variables": {
+            "filter": {"categoryId": "2", "leased": False, "cityId": "1"},
+            "first": 50,
+        },
+    },
+    # Variant 3: Simpler items query
+    {
+        "query": """
+query { items(categoryId: 2, leased: false, cityId: 1, first: 50) {
+    id slug price area floor allFloor roomCount location { name }
+} }""",
+        "variables": {},
+    },
+    # Variant 4: String category with connection
+    {
+        "query": """
+query($categoryId: String, $leased: Boolean, $cityId: String, $first: Int) {
+  itemsConnection(filter: {categoryId: $categoryId, leased: $leased, cityId: $cityId}, first: $first) {
+    edges { node { id slug price area floor allFloor roomCount hasDocuments hasMortgage location { name } } }
+  }
+}""",
+        "variables": {"categoryId": "2", "leased": False, "cityId": "1", "first": 50},
+    },
+]
 
 
 class BinaAzAdapter(BaseAdapter):
@@ -88,71 +129,129 @@ class BinaAzAdapter(BaseAdapter):
                 continue
         return None
 
-    def _fetch_via_graphql(self, client: httpx.Client, endpoint: str) -> List[Listing]:
-        """Fetch listings via GraphQL API."""
-        listings = []
-        variables = {
-            "filter": {
-                "categoryId": "2",  # apartments
-                "leased": False,
-                "cityId": "1",  # Baku
-            },
-            "first": 50,
-            "sort": "CREATED_AT",
-        }
-
+    def _try_introspection(self, client: httpx.Client, endpoint: str) -> None:
+        """Log GraphQL schema info for debugging."""
         try:
             resp = client.post(
                 endpoint,
-                json={"query": ITEMS_QUERY, "variables": variables},
-                timeout=15.0,
+                json={"query": INTROSPECTION_QUERY},
+                timeout=10.0,
             )
-            resp.raise_for_status()
-            data = resp.json()
-
-            edges = (
-                data.get("data", {})
-                .get("itemsConnection", {})
-                .get("edges", [])
-            )
-
-            for edge in edges:
-                node = edge.get("node", {})
-                listing_id = str(node.get("id", ""))
-                slug = node.get("slug", "")
-                url = f"{self.base_url}/items/{listing_id}" if listing_id else ""
-                if slug:
-                    url = f"{self.base_url}/{slug}"
-
-                location_name = ""
-                loc = node.get("location")
-                if loc:
-                    location_name = loc.get("name", "")
-
-                has_docs = node.get("hasDocuments")
-                has_mortgage = node.get("hasMortgage")
-
-                listing = Listing(
-                    listing_id=listing_id,
-                    url=url,
-                    title=slug.replace("-", " ") if slug else "",
-                    price=safe_int(str(node.get("price", ""))) if node.get("price") else None,
-                    currency=node.get("currency", "AZN"),
-                    area=safe_float(str(node.get("area", ""))) if node.get("area") else None,
-                    floor=safe_int(str(node.get("floor", ""))) if node.get("floor") else None,
-                    total_floors=safe_int(str(node.get("allFloor", ""))) if node.get("allFloor") else None,
-                    rooms=safe_int(str(node.get("roomCount", ""))) if node.get("roomCount") else None,
-                    location=location_name,
-                    has_title_deed=has_docs,
-                    is_mortgage_ready=has_mortgage,
-                    source=self.name,
+            if resp.status_code == 200:
+                data = resp.json()
+                fields = (
+                    data.get("data", {})
+                    .get("__schema", {})
+                    .get("queryType", {})
+                    .get("fields", [])
                 )
-                listings.append(listing)
-
+                field_names = [f.get("name") for f in fields]
+                logger.info(f"GraphQL available queries: {field_names}")
         except Exception as e:
-            logger.error(f"GraphQL fetch failed: {e}")
+            logger.debug(f"Introspection failed: {e}")
+
+    def _parse_graphql_nodes(self, data: dict) -> List[Listing]:
+        """Parse listing nodes from any GraphQL response shape."""
+        listings = []
+
+        # Try to find edges in response (connection pattern)
+        def find_edges(obj, depth=0):
+            if depth > 5 or not isinstance(obj, dict):
+                return []
+            if "edges" in obj and isinstance(obj["edges"], list):
+                return obj["edges"]
+            for val in obj.values():
+                if isinstance(val, dict):
+                    result = find_edges(val, depth + 1)
+                    if result:
+                        return result
+            return []
+
+        # Also try direct list of items
+        def find_items(obj, depth=0):
+            if depth > 5:
+                return []
+            if isinstance(obj, list):
+                return obj
+            if isinstance(obj, dict):
+                for val in obj.values():
+                    result = find_items(val, depth + 1)
+                    if result:
+                        return result
+            return []
+
+        edges = find_edges(data.get("data", {}))
+        if edges:
+            nodes = [e.get("node", e) for e in edges]
+        else:
+            nodes = find_items(data.get("data", {}))
+
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            listing_id = str(node.get("id", ""))
+            slug = node.get("slug", "")
+            url = f"{self.base_url}/{slug}" if slug else (
+                f"{self.base_url}/items/{listing_id}" if listing_id else ""
+            )
+
+            location_name = ""
+            loc = node.get("location")
+            if isinstance(loc, dict):
+                location_name = loc.get("name", "")
+            elif isinstance(loc, str):
+                location_name = loc
+
+            listing = Listing(
+                listing_id=listing_id,
+                url=url,
+                title=slug.replace("-", " ") if slug else "",
+                price=safe_int(str(node.get("price", ""))) if node.get("price") else None,
+                currency=node.get("currency", "AZN"),
+                area=safe_float(str(node.get("area", ""))) if node.get("area") else None,
+                floor=safe_int(str(node.get("floor", ""))) if node.get("floor") else None,
+                total_floors=safe_int(str(node.get("allFloor", ""))) if node.get("allFloor") else None,
+                rooms=safe_int(str(node.get("roomCount", ""))) if node.get("roomCount") else None,
+                location=location_name,
+                has_title_deed=node.get("hasDocuments"),
+                is_mortgage_ready=node.get("hasMortgage"),
+                source=self.name,
+            )
+            listings.append(listing)
 
         return listings
+
+    def _fetch_via_graphql(self, client: httpx.Client, endpoint: str) -> List[Listing]:
+        """Fetch listings via GraphQL API, trying multiple query variants."""
+        # Log available schema
+        self._try_introspection(client, endpoint)
+
+        for i, variant in enumerate(QUERY_VARIANTS):
+            try:
+                resp = client.post(
+                    endpoint,
+                    json={"query": variant["query"], "variables": variant["variables"]},
+                    timeout=15.0,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+                # Check for GraphQL errors
+                if data.get("errors"):
+                    logger.debug(f"Query variant {i+1} errors: {data['errors'][0].get('message', '')}")
+                    continue
+
+                listings = self._parse_graphql_nodes(data)
+                if listings:
+                    logger.info(f"Query variant {i+1} returned {len(listings)} listings")
+                    return listings
+
+            except Exception as e:
+                logger.debug(f"Query variant {i+1} failed: {e}")
+                continue
+
+        logger.warning("All GraphQL query variants failed")
+        return []
 
     def _fetch_via_html(self, client: httpx.Client) -> List[Listing]:
         """Fallback: try to scrape from rendered HTML or parse __NEXT_DATA__."""

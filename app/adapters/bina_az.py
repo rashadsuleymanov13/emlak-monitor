@@ -51,7 +51,7 @@ query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
     totalCount
     edges {
       node {
-        id price currency area floor allFloor roomCount
+        id price { amount currency } area floor allFloor roomCount
         hasDocuments hasMortgage
         city { name } location { name }
       }
@@ -71,7 +71,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
     totalCount
     edges {
       node {
-        id price area floor allFloor roomCount
+        id price { amount currency } area floor allFloor roomCount
         hasDocuments hasMortgage
         location { name }
       }
@@ -90,7 +90,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
   itemsConnection(filter: $filter, first: $first) {
     edges {
       node {
-        id price area floor allFloor roomCount
+        id price { amount currency } area floor allFloor roomCount
       }
     }
   }
@@ -240,12 +240,22 @@ class BinaAzAdapter(BaseAdapter):
             if not title and node.get("roomCount") and node.get("area"):
                 title = f"{node['roomCount']} otaqlı, {node['area']} m²"
 
+            # Parse price - can be scalar or object {amount, currency}
+            price_val = node.get("price")
+            price = None
+            currency = "AZN"
+            if isinstance(price_val, dict):
+                price = safe_int(str(price_val.get("amount", ""))) if price_val.get("amount") else None
+                currency = price_val.get("currency", "AZN")
+            elif price_val is not None:
+                price = safe_int(str(price_val))
+
             listing = Listing(
                 listing_id=listing_id,
                 url=url,
                 title=title,
-                price=safe_int(str(node.get("price", ""))) if node.get("price") else None,
-                currency=node.get("currency", "AZN"),
+                price=price,
+                currency=currency,
                 area=safe_float(str(node.get("area", ""))) if node.get("area") else None,
                 floor=safe_int(str(node.get("floor", ""))) if node.get("floor") else None,
                 total_floors=safe_int(str(node.get("allFloor", ""))) if node.get("allFloor") else None,

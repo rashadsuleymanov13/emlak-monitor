@@ -238,16 +238,23 @@ class BinaAzAdapter(BaseAdapter):
 
                 # Check for GraphQL errors
                 if data.get("errors"):
-                    logger.debug(f"Query variant {i+1} errors: {data['errors'][0].get('message', '')}")
+                    msg = data["errors"][0].get("message", "unknown")
+                    logger.info(f"Query variant {i+1} error: {msg}")
                     continue
+
+                # Log the response keys for debugging
+                data_keys = list(data.get("data", {}).keys()) if data.get("data") else []
+                logger.info(f"Query variant {i+1} response keys: {data_keys}")
 
                 listings = self._parse_graphql_nodes(data)
                 if listings:
                     logger.info(f"Query variant {i+1} returned {len(listings)} listings")
                     return listings
+                else:
+                    logger.info(f"Query variant {i+1}: 0 listings parsed from response")
 
             except Exception as e:
-                logger.debug(f"Query variant {i+1} failed: {e}")
+                logger.info(f"Query variant {i+1} failed: {e}")
                 continue
 
         logger.warning("All GraphQL query variants failed")

@@ -54,7 +54,7 @@ query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
     totalCount
     edges {
       node {
-        id price { value currency } area floor allFloor roomCount
+        id price { value currency } area { value } floor allFloor roomCount
         hasDocuments hasMortgage
         city { name } location { name }
       }
@@ -74,7 +74,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
     totalCount
     edges {
       node {
-        id price { value currency } area floor allFloor roomCount
+        id price { value currency } area { value } floor allFloor roomCount
         hasDocuments hasMortgage
         location { name }
       }
@@ -93,7 +93,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
   itemsConnection(filter: $filter, first: $first) {
     edges {
       node {
-        id price { value currency } area floor allFloor roomCount
+        id price { value currency } area { value } floor allFloor roomCount
       }
     }
   }
@@ -108,7 +108,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
         "query": """
 query($categoryId: ID, $leased: Boolean, $first: Int) {
   itemsConnection(filter: {categoryId: $categoryId, leased: $leased}, first: $first) {
-    edges { node { id price { value currency } area floor allFloor roomCount hasDocuments hasMortgage location { name } } }
+    edges { node { id price { value currency } area { value } floor allFloor roomCount hasDocuments hasMortgage location { name } } }
   }
 }""",
         "variables": {"categoryId": "2", "leased": False, "first": 50},
@@ -169,7 +169,12 @@ class BinaAzAdapter(BaseAdapter):
             logger.debug(f"Introspection failed: {e}")
 
         # Discover ESItem and ESPrice fields
-        for type_name, query in [("ESItem", FIELD_DISCOVERY_QUERY), ("ESPrice", PRICE_DISCOVERY_QUERY)]:
+        type_queries = [
+            ("ESItem", FIELD_DISCOVERY_QUERY),
+            ("ESPrice", PRICE_DISCOVERY_QUERY),
+            ("ESArea", '{ __type(name: "ESArea") { fields { name } } }'),
+        ]
+        for type_name, query in type_queries:
             try:
                 resp = client.post(endpoint, json={"query": query}, timeout=10.0)
                 if resp.status_code == 200:
@@ -257,7 +262,7 @@ class BinaAzAdapter(BaseAdapter):
                 title=title,
                 price=price,
                 currency=currency,
-                area=safe_float(str(node.get("area", ""))) if node.get("area") else None,
+                area=safe_float(str(node["area"]["value"])) if isinstance(node.get("area"), dict) and node["area"].get("value") else (safe_float(str(node.get("area", ""))) if node.get("area") and not isinstance(node.get("area"), dict) else None),
                 floor=safe_int(str(node.get("floor", ""))) if node.get("floor") else None,
                 total_floors=safe_int(str(node.get("allFloor", ""))) if node.get("allFloor") else None,
                 rooms=safe_int(str(node.get("roomCount", ""))) if node.get("roomCount") else None,

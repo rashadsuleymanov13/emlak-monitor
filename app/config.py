@@ -10,7 +10,7 @@ class Config:
     price_max: int = 200_000
     area_min: int = 60
     area_max: int = 90
-    max_total_floors: int = 4  # only buildings with 4 or fewer floors (exclude 5+)
+    min_total_floors: int = 6  # only buildings with 6+ floors
     require_title_deed: bool = True
     require_mortgage_ready: bool = False
     target_locations: List[str] = field(default_factory=lambda: [

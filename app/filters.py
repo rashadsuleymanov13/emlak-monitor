@@ -25,7 +25,7 @@ def passes_area_filter(listing: Listing, cfg: Config) -> bool:
 def passes_floor_filter(listing: Listing, cfg: Config) -> bool:
     if listing.total_floors is None:
         return True  # Don't exclude if unknown
-    return listing.total_floors <= cfg.max_total_floors
+    return listing.total_floors >= cfg.min_total_floors
 
 
 def passes_location_filter(listing: Listing, cfg: Config) -> bool:

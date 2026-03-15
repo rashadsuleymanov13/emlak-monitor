@@ -54,7 +54,7 @@ query GetItems($filter: ItemFilter!, $first: Int, $after: String) {
     totalCount
     edges {
       node {
-        id price { value currency } area { value } floor allFloor roomCount
+        id price { value currency } area { value } roomCount
         hasDocuments hasMortgage
         city { name } location { name }
       }
@@ -74,7 +74,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
     totalCount
     edges {
       node {
-        id price { value currency } area { value } floor allFloor roomCount
+        id price { value currency } area { value } roomCount
         hasDocuments hasMortgage
         location { name }
       }
@@ -93,7 +93,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
   itemsConnection(filter: $filter, first: $first) {
     edges {
       node {
-        id price { value currency } area { value } floor allFloor roomCount
+        id price { value currency } area { value } roomCount
       }
     }
   }
@@ -108,7 +108,7 @@ query GetItems($filter: ItemFilter!, $first: Int) {
         "query": """
 query($categoryId: ID, $leased: Boolean, $first: Int) {
   itemsConnection(filter: {categoryId: $categoryId, leased: $leased}, first: $first) {
-    edges { node { id price { value currency } area { value } floor allFloor roomCount hasDocuments hasMortgage location { name } } }
+    edges { node { id price { value currency } area { value } roomCount hasDocuments hasMortgage location { name } } }
   }
 }""",
         "variables": {"categoryId": "2", "leased": False, "first": 50},

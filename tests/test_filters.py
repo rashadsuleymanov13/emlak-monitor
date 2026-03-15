@@ -95,6 +95,14 @@ class TestFloorFilter:
         listing = make_listing(total_floors=5)
         assert passes_floor_filter(listing, cfg) is False
 
+    def test_excludes_3_floor_building(self, cfg):
+        listing = make_listing(total_floors=3)
+        assert passes_floor_filter(listing, cfg) is False
+
+    def test_allows_6_floor_building(self, cfg):
+        listing = make_listing(total_floors=6)
+        assert passes_floor_filter(listing, cfg) is True
+
     def test_allows_16_floor_building(self, cfg):
         listing = make_listing(total_floors=16)
         assert passes_floor_filter(listing, cfg) is True

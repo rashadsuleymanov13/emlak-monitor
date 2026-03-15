@@ -91,12 +91,16 @@ class TestAreaFilter:
 
 
 class TestFloorFilter:
-    def test_allows_5_floor_building(self, cfg):
+    def test_excludes_5_floor_building(self, cfg):
         listing = make_listing(total_floors=5)
-        assert passes_floor_filter(listing, cfg) is True
+        assert passes_floor_filter(listing, cfg) is False
 
-    def test_allows_3_floor_building(self, cfg):
+    def test_excludes_3_floor_building(self, cfg):
         listing = make_listing(total_floors=3)
+        assert passes_floor_filter(listing, cfg) is False
+
+    def test_allows_6_floor_building(self, cfg):
+        listing = make_listing(total_floors=6)
         assert passes_floor_filter(listing, cfg) is True
 
     def test_allows_16_floor_building(self, cfg):
@@ -212,9 +216,9 @@ class TestListingMatches:
         listing = make_listing(area=30.0)
         assert listing_matches(listing, cfg) is False
 
-    def test_passes_floor_any(self, cfg):
+    def test_fails_floor(self, cfg):
         listing = make_listing(total_floors=5)
-        assert listing_matches(listing, cfg) is True
+        assert listing_matches(listing, cfg) is False
 
     def test_fails_location(self, cfg):
         listing = make_listing(

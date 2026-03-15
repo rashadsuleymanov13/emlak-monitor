@@ -50,6 +50,7 @@ def run_monitor(dry_run: bool = False) -> dict:
         logger.info("=== Checking for new listings ===")
 
     all_matched: List[Listing] = []
+    filter_stats: dict = {}
 
     for adapter_cls in ALL_ADAPTERS:
         adapter = adapter_cls()
@@ -65,7 +66,7 @@ def run_monitor(dry_run: bool = False) -> dict:
             continue
 
         for listing in listings:
-            if listing_matches(listing, config):
+            if listing_matches(listing, config, log_stats=filter_stats):
                 stats["total_matched"] += 1
                 dedup_key = get_dedup_key(
                     listing.listing_id, listing.url,
@@ -109,6 +110,9 @@ def run_monitor(dry_run: bool = False) -> dict:
         logger.info(f"Seeding complete. {get_seen_count(conn)} listings seeded.")
 
     conn.close()
+
+    if filter_stats:
+        logger.info(f"Filter rejections: {filter_stats}")
 
     logger.info(
         f"Stats: fetched={stats['total_fetched']}, "

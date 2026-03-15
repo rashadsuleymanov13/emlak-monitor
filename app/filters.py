@@ -51,13 +51,30 @@ def passes_mortgage_filter(listing: Listing, cfg: Config) -> bool:
     return text_contains_any(searchable, MORTGAGE_KEYWORDS)
 
 
-def listing_matches(listing: Listing, cfg: Config) -> bool:
+def listing_matches(listing: Listing, cfg: Config, log_stats: dict | None = None) -> bool:
     """Check if a listing passes all filters."""
-    return (
-        passes_price_filter(listing, cfg)
-        and passes_area_filter(listing, cfg)
-        and passes_floor_filter(listing, cfg)
-        and passes_location_filter(listing, cfg)
-        and passes_title_deed_filter(listing, cfg)
-        and passes_mortgage_filter(listing, cfg)
-    )
+    if not passes_price_filter(listing, cfg):
+        if log_stats is not None:
+            log_stats["fail_price"] = log_stats.get("fail_price", 0) + 1
+        return False
+    if not passes_area_filter(listing, cfg):
+        if log_stats is not None:
+            log_stats["fail_area"] = log_stats.get("fail_area", 0) + 1
+        return False
+    if not passes_floor_filter(listing, cfg):
+        if log_stats is not None:
+            log_stats["fail_floor"] = log_stats.get("fail_floor", 0) + 1
+        return False
+    if not passes_location_filter(listing, cfg):
+        if log_stats is not None:
+            log_stats["fail_location"] = log_stats.get("fail_location", 0) + 1
+        return False
+    if not passes_title_deed_filter(listing, cfg):
+        if log_stats is not None:
+            log_stats["fail_kupca"] = log_stats.get("fail_kupca", 0) + 1
+        return False
+    if not passes_mortgage_filter(listing, cfg):
+        if log_stats is not None:
+            log_stats["fail_ipoteka"] = log_stats.get("fail_ipoteka", 0) + 1
+        return False
+    return True

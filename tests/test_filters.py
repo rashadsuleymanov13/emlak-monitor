@@ -226,10 +226,10 @@ class TestListingMatches:
         )
         assert listing_matches(listing, cfg) is False
 
-    def test_passes_with_wrong_area(self, cfg):
-        """Area is soft filter — should still match."""
+    def test_fails_area(self, cfg):
+        """Area is mandatory filter."""
         listing = make_listing(area=30.0)
-        assert listing_matches(listing, cfg) is True
+        assert listing_matches(listing, cfg) is False
 
     def test_passes_with_wrong_floor(self, cfg):
         """Floor is soft filter — should still match."""

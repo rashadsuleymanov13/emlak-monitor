@@ -54,20 +54,21 @@ def passes_mortgage_filter(listing: Listing, cfg: Config) -> bool:
 def listing_matches(listing: Listing, cfg: Config, log_stats: dict | None = None) -> bool:
     """Check if a listing passes mandatory filters (location + price).
     Area, floor, and title deed are soft filters — logged but don't block."""
-    # --- Mandatory: location must match ---
+    # --- Mandatory: location + price + area ---
     if not passes_location_filter(listing, cfg):
         if log_stats is not None:
             log_stats["fail_location"] = log_stats.get("fail_location", 0) + 1
         return False
-    # --- Mandatory: price must be in range ---
     if not passes_price_filter(listing, cfg):
         if log_stats is not None:
             log_stats["fail_price"] = log_stats.get("fail_price", 0) + 1
         return False
+    if not passes_area_filter(listing, cfg):
+        if log_stats is not None:
+            log_stats["fail_area"] = log_stats.get("fail_area", 0) + 1
+        return False
     # --- Soft filters: logged only, don't block ---
     if log_stats is not None:
-        if not passes_area_filter(listing, cfg):
-            log_stats["soft_area"] = log_stats.get("soft_area", 0) + 1
         if not passes_floor_filter(listing, cfg):
             log_stats["soft_floor"] = log_stats.get("soft_floor", 0) + 1
         if not passes_title_deed_filter(listing, cfg):

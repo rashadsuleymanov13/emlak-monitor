@@ -7,7 +7,7 @@ from typing import List
 @dataclass
 class Config:
     price_min: int = 150_000
-    price_max: int = 200_000
+    price_max: int = 210_000
     area_min: int = 60
     area_max: int = 90
     exclude_floors_min: int = 6   # exclude buildings in 6-25 range

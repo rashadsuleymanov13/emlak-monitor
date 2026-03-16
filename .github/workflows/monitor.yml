@@ -7,15 +7,20 @@ on:
       - 'data/**'
       - 'README.md'
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '0 * * * *'  # hourly — starts a new loop each hour as safety net
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
 jobs:
   monitor:
     runs-on: ubuntu-latest
+    timeout-minutes: 350  # ~5.8 hours, under 6h limit
 
     steps:
       - name: Checkout repository
@@ -30,17 +35,27 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run monitor
-        run: python -m app.main run
-
-      - name: Commit state changes
+      - name: Run monitor loop
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
-          if git diff --cached --quiet; then
-            echo "No state changes to commit"
-          else
-            git commit -m "chore: update monitor state [skip ci]"
-            git push
-          fi
+          for i in $(seq 1 60); do
+            echo "=== Run $i/60 at $(date -u) ==="
+
+            # Pull latest state
+            git pull --rebase origin master || true
+
+            python -m app.main run
+
+            # Commit state changes
+            git add data/
+            if ! git diff --cached --quiet; then
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git commit -m "chore: update monitor state [skip ci]"
+              git push || true
+            fi
+
+            if [ $i -lt 60 ]; then
+              echo "Sleeping 5 minutes..."
+              sleep 300
+            fi
+          done

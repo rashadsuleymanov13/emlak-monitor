@@ -220,16 +220,23 @@ class TestListingMatches:
         listing = make_listing(price=100000)
         assert listing_matches(listing, cfg) is False
 
-    def test_fails_area(self, cfg):
-        listing = make_listing(area=30.0)
-        assert listing_matches(listing, cfg) is False
-
-    def test_fails_floor(self, cfg):
-        listing = make_listing(total_floors=5)
-        assert listing_matches(listing, cfg) is False
-
     def test_fails_location(self, cfg):
         listing = make_listing(
             title="Yasamal", location="Yasamal", description="Kupça var ipoteka var"
         )
         assert listing_matches(listing, cfg) is False
+
+    def test_passes_with_wrong_area(self, cfg):
+        """Area is soft filter — should still match."""
+        listing = make_listing(area=30.0)
+        assert listing_matches(listing, cfg) is True
+
+    def test_passes_with_wrong_floor(self, cfg):
+        """Floor is soft filter — should still match."""
+        listing = make_listing(total_floors=10)
+        assert listing_matches(listing, cfg) is True
+
+    def test_passes_without_kupca(self, cfg):
+        """Title deed is soft filter — should still match."""
+        listing = make_listing(has_title_deed=None, description="Gözəl mənzil Nərimanov", raw_text="")
+        assert listing_matches(listing, cfg) is True

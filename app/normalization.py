@@ -24,7 +24,7 @@ _TRANSLIT_MAP = {
 
 # Location name variants for matching
 LOCATION_VARIANTS: List[Tuple[str, List[str]]] = [
-    # Metro stansiyaları
+    # Metro stansiyaları — bütün Bakı metrosu
     ("xalqlar dostluğu", [
         "xalqlar dostlugu", "xalqlar dostluğu",
         "xalqlar", "dostluq", "dostlugu",
@@ -40,6 +40,50 @@ LOCATION_VARIANTS: List[Tuple[str, List[str]]] = [
     ("elmlər akademiyası", [
         "elmler akademiyasi", "elmlər akademiyası",
         "elmler", "akademiya",
+    ]),
+    ("içərişəhər", [
+        "icerisheher", "içərişəhər", "icherisheher",
+        "içəri şəhər", "iceri seher",
+    ]),
+    ("sahil", ["sahil"]),
+    ("28 may", ["28 may", "28 mayis", "iyirmi səkkiz may"]),
+    ("bakmil", ["bakmil"]),
+    ("ulduz", ["ulduz"]),
+    ("koroğlu", ["koroglu", "koroğlu"]),
+    ("neftçilər", ["neftciler", "neftçilər", "neftchiler"]),
+    ("əhmədli", ["ehmedli", "əhmədli", "ahmadli", "ahmedli"]),
+    ("həzi aslanov", [
+        "hezi aslanov", "həzi aslanov", "hazi aslanov", "aslanov",
+    ]),
+    ("nizami gəncəvi", [
+        "nizami gencevi", "nizami gəncəvi", "nizami",
+    ]),
+    ("inşaatçılar", [
+        "insaatcilar", "inşaatçılar", "inshaatchilar",
+    ]),
+    ("20 yanvar", ["20 yanvar", "iyirmi yanvar"]),
+    ("memar əcəmi", [
+        "memar ecemi", "memar əcəmi", "memar acami", "ecemi", "əcəmi",
+    ]),
+    ("nəsimi", ["nesimi", "nəsimi"]),
+    ("azadlıq prospekti", [
+        "azadliq prospekti", "azadlıq prospekti", "azadliq", "azadlıq",
+    ]),
+    ("dərnəgül", ["dernegul", "dərnəgül", "darnagul"]),
+    ("cəfər cabbarlı", [
+        "cefer cabbarli", "cəfər cabbarlı", "cabbarli", "cabbarlı",
+        "jafar jabbarli",
+    ]),
+    ("xətai", ["xetai", "xətai", "khatai", "xatai"]),
+    ("avtovağzal", ["avtovagzal", "avtovağzal", "avtovokzal"]),
+    ("8 noyabr", ["8 noyabr", "səkkiz noyabr"]),
+    # Qəsəbə / yaşayış kompleksi
+    ("masazır", [
+        "masazir", "masazır", "masazir qesebesi", "masazır qəsəbəsi",
+    ]),
+    ("qurtuluş 93", [
+        "qurtulus 93", "qurtuluş 93", "qurtulus", "qurtuluş",
+        "qurtulus93", "qurtuluş93",
     ]),
     # Küçə / məhəllə / landmark
     ("təbriz küçəsi", ["tebriz", "tabriz", "təbriz"]),

@@ -6,7 +6,6 @@ from app.models import Listing
 from app.filters import (
     passes_price_filter,
     passes_area_filter,
-    passes_floor_filter,
     passes_location_filter,
     passes_title_deed_filter,
     passes_mortgage_filter,
@@ -24,7 +23,7 @@ def make_listing(**kwargs) -> Listing:
         "listing_id": "test-1",
         "url": "https://example.com/1",
         "title": "3 otaqlı mənzil Nərimanov rayonu",
-        "price": 175000,
+        "price": 160000,
         "area": 75.0,
         "floor": 3,
         "total_floors": 5,
@@ -40,23 +39,20 @@ def make_listing(**kwargs) -> Listing:
 
 class TestPriceFilter:
     def test_in_range(self, cfg):
-        listing = make_listing(price=175000)
+        listing = make_listing(price=160000)
         assert passes_price_filter(listing, cfg) is True
 
-    def test_at_min(self, cfg):
-        listing = make_listing(price=150000)
+    def test_low_price_ok(self, cfg):
+        # alt limit yoxdur (price_min=0) — aşağı qiymət də keçməlidir
+        listing = make_listing(price=50000)
         assert passes_price_filter(listing, cfg) is True
 
     def test_at_max(self, cfg):
-        listing = make_listing(price=200000)
+        listing = make_listing(price=170000)
         assert passes_price_filter(listing, cfg) is True
 
-    def test_below_min(self, cfg):
-        listing = make_listing(price=149999)
-        assert passes_price_filter(listing, cfg) is False
-
     def test_above_max(self, cfg):
-        listing = make_listing(price=200001)
+        listing = make_listing(price=170001)
         assert passes_price_filter(listing, cfg) is False
 
     def test_none_price(self, cfg):
@@ -88,36 +84,6 @@ class TestAreaFilter:
     def test_none_area(self, cfg):
         listing = make_listing(area=None)
         assert passes_area_filter(listing, cfg) is False
-
-
-class TestFloorFilter:
-    def test_excludes_6_floor_building(self, cfg):
-        listing = make_listing(total_floors=6)
-        assert passes_floor_filter(listing, cfg) is False
-
-    def test_excludes_16_floor_building(self, cfg):
-        listing = make_listing(total_floors=16)
-        assert passes_floor_filter(listing, cfg) is False
-
-    def test_excludes_25_floor_building(self, cfg):
-        listing = make_listing(total_floors=25)
-        assert passes_floor_filter(listing, cfg) is False
-
-    def test_allows_5_floor_building(self, cfg):
-        listing = make_listing(total_floors=5)
-        assert passes_floor_filter(listing, cfg) is True
-
-    def test_allows_3_floor_building(self, cfg):
-        listing = make_listing(total_floors=3)
-        assert passes_floor_filter(listing, cfg) is True
-
-    def test_allows_26_floor_building(self, cfg):
-        listing = make_listing(total_floors=26)
-        assert passes_floor_filter(listing, cfg) is True
-
-    def test_none_floors_passes(self, cfg):
-        listing = make_listing(total_floors=None)
-        assert passes_floor_filter(listing, cfg) is True
 
 
 class TestLocationFilter:
@@ -217,7 +183,8 @@ class TestListingMatches:
         assert listing_matches(listing, cfg) is True
 
     def test_fails_price(self, cfg):
-        listing = make_listing(price=100000)
+        # yalnız yuxarı hədd (170k) bloklayır
+        listing = make_listing(price=200000)
         assert listing_matches(listing, cfg) is False
 
     def test_fails_location(self, cfg):
@@ -226,14 +193,19 @@ class TestListingMatches:
         )
         assert listing_matches(listing, cfg) is False
 
-    def test_fails_area(self, cfg):
-        """Area is mandatory filter."""
+    def test_small_area_still_matches(self, cfg):
+        """Area (kv) artıq filtr deyil — bloklamamalıdır."""
         listing = make_listing(area=30.0)
-        assert listing_matches(listing, cfg) is False
+        assert listing_matches(listing, cfg) is True
 
-    def test_passes_with_wrong_floor(self, cfg):
-        """Floor is soft filter — should still match."""
-        listing = make_listing(total_floors=10)
+    def test_high_rise_still_matches(self, cfg):
+        """Mərtəbə/tikili filtri yoxdur — yeni hündürmərtəbəli də keçməlidir."""
+        listing = make_listing(total_floors=20)
+        assert listing_matches(listing, cfg) is True
+
+    def test_old_low_rise_still_matches(self, cfg):
+        """Köhnə tikili (az mərtəbəli) də keçməlidir."""
+        listing = make_listing(total_floors=4)
         assert listing_matches(listing, cfg) is True
 
     def test_passes_without_kupca(self, cfg):

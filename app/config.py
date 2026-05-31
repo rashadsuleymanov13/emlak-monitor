@@ -6,22 +6,44 @@ from typing import List
 
 @dataclass
 class Config:
-    price_min: int = 150_000
-    price_max: int = 210_000
-    area_min: int = 60
+    price_min: int = 0          # alt limit yoxdur — yalnız yuxarı hədd
+    price_max: int = 170_000    # 170 min-dən yuxarı YOX
+    area_min: int = 60          # area (kv) filtri DEAKTİVDİR — listing_matches-də istifadə olunmur
     area_max: int = 90
-    exclude_floors_min: int = 6   # exclude buildings in 6-25 range
-    exclude_floors_max: int = 25
+    # Mərtəbə/tikili filtri YOXDUR — köhnə və yeni tikili hamısı gəlir
     require_title_deed: bool = True
     require_mortgage_ready: bool = False
     target_locations: List[str] = field(default_factory=lambda: [
-        # Metro stansiyaları
-        "Xalqlar dostluğu",
-        "Qara Qarayev",
-        "Nəriman Nərimanov",
+        # --- Bakı metrosu: bütün stansiyalar ---
+        "İçərişəhər",
+        "Sahil",
+        "28 May",
         "Gənclik",
+        "Nəriman Nərimanov",
+        "Bakmil",
+        "Ulduz",
+        "Koroğlu",
+        "Qara Qarayev",
+        "Neftçilər",
+        "Xalqlar dostluğu",
+        "Əhmədli",
+        "Həzi Aslanov",
+        "Nizami Gəncəvi",
         "Elmlər Akademiyası",
-        # Küçə / məhəllə / landmark
+        "İnşaatçılar",
+        "20 Yanvar",
+        "Memar Əcəmi",
+        "Nəsimi",
+        "Azadlıq prospekti",
+        "Dərnəgül",
+        "Cəfər Cabbarlı",
+        "Xətai",
+        "Avtovağzal",
+        "8 Noyabr",
+        # --- Qəsəbə / yaşayış kompleksi ---
+        "Masazır",
+        "Qurtuluş 93",
+        # --- Küçə / məhəllə / landmark ---
         "Təbriz küçəsi",
         "Çapayev",
         "Ayna Sultanova",

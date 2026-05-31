@@ -7,6 +7,7 @@ from app.normalization import (
     matches_location,
     TITLE_DEED_KEYWORDS,
     MORTGAGE_KEYWORDS,
+    RENT_KEYWORDS,
 )
 
 
@@ -20,6 +21,12 @@ def passes_area_filter(listing: Listing, cfg: Config) -> bool:
     if listing.area is None:
         return False
     return cfg.area_min <= listing.area <= cfg.area_max
+
+
+def is_rent_listing(listing: Listing) -> bool:
+    """True if the listing looks like a rental (kirayə/icarə), not a sale."""
+    searchable = f"{listing.title} {listing.location} {listing.description} {listing.url} {listing.raw_text}"
+    return text_contains_any(searchable, RENT_KEYWORDS)
 
 
 def passes_location_filter(listing: Listing, cfg: Config) -> bool:
@@ -48,7 +55,13 @@ def passes_mortgage_filter(listing: Listing, cfg: Config) -> bool:
 def listing_matches(listing: Listing, cfg: Config, log_stats: dict | None = None) -> bool:
     """Check if a listing passes mandatory filters (location + price).
     Area (kv), bina mərtəbəsi/tikili, and title deed are NOT enforced —
-    köhnə/yeni tikili hamısı keçir; area/kupça yalnız soft signal kimi loglanır."""
+    köhnə/yeni tikili hamısı keçir; area/kupça yalnız soft signal kimi loglanır.
+    Kirayə/icarə elanları tamamilə rədd edilir — yalnız satılıq keçir."""
+    # --- Mandatory: satılıq olmalı (kirayə/icarə rədd) ---
+    if is_rent_listing(listing):
+        if log_stats is not None:
+            log_stats["fail_rent"] = log_stats.get("fail_rent", 0) + 1
+        return False
     # --- Mandatory: location + price ---
     if not passes_location_filter(listing, cfg):
         if log_stats is not None:

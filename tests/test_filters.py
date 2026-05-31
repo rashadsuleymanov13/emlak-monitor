@@ -9,6 +9,7 @@ from app.filters import (
     passes_location_filter,
     passes_title_deed_filter,
     passes_mortgage_filter,
+    is_rent_listing,
     listing_matches,
 )
 
@@ -172,9 +173,37 @@ class TestMortgageFilter:
         listing = make_listing(is_mortgage_ready=None, description="Kreditə yararlı")
         assert passes_mortgage_filter(listing, cfg) is True
 
-    def test_no_mortgage(self, cfg):
+    def test_no_mortgage(self):
+        # require_mortgage_ready aktiv olanda ipoteka işarəsi olmayan elan keçməməlidir
+        cfg = Config(require_mortgage_ready=True)
         listing = make_listing(is_mortgage_ready=None, description="Gözəl mənzil", raw_text="")
         assert passes_mortgage_filter(listing, cfg) is False
+
+
+class TestRentFilter:
+    def test_kiraye_in_title(self):
+        listing = make_listing(title="Nərimanov rayonu kirayə mənzil")
+        assert is_rent_listing(listing) is True
+
+    def test_kiraye_ascii(self):
+        listing = make_listing(title="Nerimanov kiraye verilir", description="")
+        assert is_rent_listing(listing) is True
+
+    def test_icare_in_description(self):
+        listing = make_listing(title="Nərimanov mənzil", description="İcarəyə verilir")
+        assert is_rent_listing(listing) is True
+
+    def test_gunluk(self):
+        listing = make_listing(title="Nərimanov günlük mənzil")
+        assert is_rent_listing(listing) is True
+
+    def test_kiraye_in_url(self):
+        listing = make_listing(url="https://bina.az/kiraye/123", title="Nərimanov mənzil")
+        assert is_rent_listing(listing) is True
+
+    def test_satilir_not_rent(self):
+        listing = make_listing(title="Nərimanov satılır mənzil", description="Kupça var")
+        assert is_rent_listing(listing) is False
 
 
 class TestListingMatches:
@@ -212,3 +241,8 @@ class TestListingMatches:
         """Title deed is soft filter — should still match."""
         listing = make_listing(has_title_deed=None, description="Gözəl mənzil Nərimanov", raw_text="")
         assert listing_matches(listing, cfg) is True
+
+    def test_rejects_rent(self, cfg):
+        """Kirayə elanı yer/qiymət uyğun olsa belə rədd edilməlidir."""
+        listing = make_listing(title="Nərimanov rayonu kirayə mənzil")
+        assert listing_matches(listing, cfg) is False

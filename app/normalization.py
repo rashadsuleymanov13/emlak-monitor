@@ -113,6 +113,16 @@ TITLE_DEED_KEYWORDS = [
     "sənəd", "sened",
 ]
 
+# Rent keywords — listings containing these are kirayə/icarə, not satılıq
+RENT_KEYWORDS = [
+    "kirayə", "kiraye", "kirayələnir", "kirayelenir",
+    "kirayə verilir", "kiraye verilir", "kirayəyə", "kirayeye",
+    "kirayə verilən", "kiraye verilen",
+    "icarə", "icare", "icarəyə", "icareye", "icarəyə verilir",
+    "günlük", "gunluk", "günlük kirayə", "gunluk kiraye",
+    "/kiraye", "/kirayə",
+]
+
 # Mortgage keywords
 MORTGAGE_KEYWORDS = [
     "ipoteka", "ipotekaya yararlı", "ipotekaya yararli",
@@ -127,6 +137,9 @@ def normalize_text(text: str) -> str:
     """Lowercase, strip, normalize unicode, transliterate."""
     text = text.lower().strip()
     text = unicodedata.normalize("NFC", text)
+    # Azərbaycan "İ".lower() → "i" + combining dot above (U+0307); silirik ki,
+    # böyük hərflə başlayan sözlər (İcarəyə, İpoteka) də uyğunlaşsın
+    text = text.replace("̇", "")
     return text
 
 

@@ -40,47 +40,45 @@ class TestTextContainsAny:
 
 
 class TestMatchesLocation:
-    def test_nerimanov_azerbaijani(self):
-        cfg = Config()
-        assert matches_location("Nərimanov rayonu", cfg.target_locations) is True
+    """Yalnız 3 ərazi hədəfdir: Həzi Aslanov, Əhmədli, Qara Qarayev."""
 
-    def test_nerimanov_ascii(self):
+    def test_hezi_aslanov_azerbaijani(self):
         cfg = Config()
-        assert matches_location("Nerimanov rayonu", cfg.target_locations) is True
+        assert matches_location("Həzi Aslanov metrosu", cfg.target_locations) is True
 
-    def test_chapayev_azerbaijani(self):
+    def test_hezi_aslanov_ascii(self):
         cfg = Config()
-        assert matches_location("Çapayev küçəsi", cfg.target_locations) is True
+        assert matches_location("Hezi Aslanov m/s", cfg.target_locations) is True
+        assert matches_location("Aslanov qesebesi", cfg.target_locations) is True
 
-    def test_chapayev_ascii(self):
+    def test_ehmedli_azerbaijani(self):
         cfg = Config()
-        assert matches_location("Chapayev kucesi", cfg.target_locations) is True
+        assert matches_location("Əhmədli rayonu", cfg.target_locations) is True
 
-    def test_ataturk_variants(self):
+    def test_ehmedli_ascii(self):
         cfg = Config()
-        assert matches_location("Atatürk parkı", cfg.target_locations) is True
-        assert matches_location("Ataturk parki", cfg.target_locations) is True
-        assert matches_location("Ata turk", cfg.target_locations) is True
+        assert matches_location("Ehmedli metrosu", cfg.target_locations) is True
+        assert matches_location("Ahmadli", cfg.target_locations) is True
 
-    def test_xalqlar_dostlugu(self):
+    def test_qara_qarayev_azerbaijani(self):
         cfg = Config()
-        assert matches_location("Xalqlar dostluğu metrosu", cfg.target_locations) is True
-        assert matches_location("xalqlar dostlugu", cfg.target_locations) is True
+        assert matches_location("Qara Qarayev metrosu", cfg.target_locations) is True
 
-    def test_elmler_akademiyasi(self):
+    def test_qara_qarayev_ascii(self):
         cfg = Config()
-        assert matches_location("Elmlər Akademiyası m.", cfg.target_locations) is True
-        assert matches_location("elmler akademiyasi", cfg.target_locations) is True
+        assert matches_location("Gara Garayev", cfg.target_locations) is True
+        assert matches_location("Qarayev m.", cfg.target_locations) is True
 
-    def test_demircizade(self):
+    def test_removed_locations_no_longer_match(self):
+        """Siyahıdan çıxarılan ərazilər artıq keçməməlidir."""
         cfg = Config()
-        assert matches_location("Dəmirçizadə küçəsi", cfg.target_locations) is True
-        assert matches_location("Demircizade", cfg.target_locations) is True
-
-    def test_serq_bazari(self):
-        cfg = Config()
-        assert matches_location("Şərq bazarı yaxınlığı", cfg.target_locations) is True
-        assert matches_location("serq bazari", cfg.target_locations) is True
+        assert matches_location("Nərimanov rayonu", cfg.target_locations) is False
+        assert matches_location("Çapayev küçəsi", cfg.target_locations) is False
+        assert matches_location("Atatürk parkı", cfg.target_locations) is False
+        assert matches_location("Xalqlar dostluğu metrosu", cfg.target_locations) is False
+        assert matches_location("Elmlər Akademiyası m.", cfg.target_locations) is False
+        assert matches_location("Şərq bazarı yaxınlığı", cfg.target_locations) is False
+        assert matches_location("Masazır", cfg.target_locations) is False
 
     def test_no_match(self):
         cfg = Config()

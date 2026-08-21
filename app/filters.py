@@ -53,16 +53,17 @@ def passes_mortgage_filter(listing: Listing, cfg: Config) -> bool:
 
 
 def listing_matches(listing: Listing, cfg: Config, log_stats: dict | None = None) -> bool:
-    """Check if a listing passes mandatory filters (location + price).
-    Area (kv), bina mərtəbəsi/tikili, and title deed are NOT enforced —
-    köhnə/yeni tikili hamısı keçir; area/kupça yalnız soft signal kimi loglanır.
+    """Check if a listing passes mandatory filters (location + price + area).
+    Otaq sayı və bina mərtəbəsi/tikili filtri YOXDUR — 1-dən 2-yə düzəldilmiş,
+    2 və ya 3 otaq fərq etmir, köhnə/yeni tikili hamısı keçir; əsas meyar sahədir.
+    Kupça yalnız soft signal kimi loglanır.
     Kirayə/icarə elanları tamamilə rədd edilir — yalnız satılıq keçir."""
     # --- Mandatory: satılıq olmalı (kirayə/icarə rədd) ---
     if is_rent_listing(listing):
         if log_stats is not None:
             log_stats["fail_rent"] = log_stats.get("fail_rent", 0) + 1
         return False
-    # --- Mandatory: location + price ---
+    # --- Mandatory: location + price + area ---
     if not passes_location_filter(listing, cfg):
         if log_stats is not None:
             log_stats["fail_location"] = log_stats.get("fail_location", 0) + 1
@@ -71,10 +72,14 @@ def listing_matches(listing: Listing, cfg: Config, log_stats: dict | None = None
         if log_stats is not None:
             log_stats["fail_price"] = log_stats.get("fail_price", 0) + 1
         return False
-    # --- Soft filters: logged only, don't block (area/kupça) ---
+    if not passes_area_filter(listing, cfg):
+        if log_stats is not None:
+            # sahəsi oxunmayan elanlar da bura düşür — ayrıca sayılır
+            key = "fail_area_unknown" if listing.area is None else "fail_area"
+            log_stats[key] = log_stats.get(key, 0) + 1
+        return False
+    # --- Soft filter: logged only, doesn't block (kupça) ---
     if log_stats is not None:
-        if not passes_area_filter(listing, cfg):
-            log_stats["soft_area"] = log_stats.get("soft_area", 0) + 1
         if not passes_title_deed_filter(listing, cfg):
             log_stats["soft_kupca"] = log_stats.get("soft_kupca", 0) + 1
     return True

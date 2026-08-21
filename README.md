@@ -54,14 +54,13 @@ python -m app.main reset
 
 | Parametr | Təsvir | Default |
 |----------|--------|---------|
-| `price_min` | Minimum qiymət (AZN) | 150,000 |
-| `price_max` | Maksimum qiymət (AZN) | 200,000 |
-| `area_min` | Minimum sahə (m²) | 60 |
-| `area_max` | Maksimum sahə (m²) | 90 |
-| `exclude_total_floors` | İstisna edilən bina mərtəbə sayları | [5] |
-| `require_title_deed` | Kupça tələb olunur | true |
-| `require_mortgage_ready` | İpoteka tələb olunur | true |
-| `target_locations` | Hədəf ərazilər | (yuxarıya baxın) |
+| `price_min` | Minimum qiymət (AZN) | 170,000 |
+| `price_max` | Maksimum qiymət (AZN) | 190,000 |
+| `area_min` | Minimum sahə (m²) | 65 |
+| `area_max` | Maksimum sahə (m²) | 80 |
+| `require_title_deed` | Kupça tələb olunur (soft — bloklamır) | true |
+| `require_mortgage_ready` | İpoteka tələb olunur | false |
+| `target_locations` | Hədəf ərazilər | Həzi Aslanov, Əhmədli, Qara Qarayev |
 | `ntfy_topic` | ntfy mövzu adı | rs-emlak |
 | `request_delay` | Sorğular arası fasilə (saniyə) | 2.0 |
 
@@ -132,16 +131,18 @@ ALL_ADAPTERS = [..., YeniSaytAdapter]
 
 ## Filterlər Necə İşləyir
 
-Sistem hər elanı aşağıdakı filterlərdən keçirir:
+Sistem hər elanı aşağıdakı **məcburi** filterlərdən keçirir (biri keçmirsə elan atılır):
 
-1. **Qiymət filteri**: Elanın qiyməti `price_min` və `price_max` arasında olmalıdır
-2. **Sahə filteri**: Elanın sahəsi `area_min` və `area_max` arasında olmalıdır
-3. **Mərtəbə filteri**: Binanın ümumi mərtəbə sayı `exclude_total_floors` siyahısında olmamalıdır
-4. **Ərazi filteri**: Elanın başlığı, ünvanı və ya təsvirində hədəf ərazilərindən biri olmalıdır
-5. **Kupça filteri**: Elanda kupça/çıxarış qeyd olunmalıdır
-6. **İpoteka filteri**: Elanda ipoteka/kredit imkanı qeyd olunmalıdır
+1. **Satılıq filteri**: Kirayə/icarə/günlük elanları tamamilə rədd edilir
+2. **Ərazi filteri**: Elanın başlığı, ünvanı və ya təsvirində hədəf ərazilərindən biri olmalıdır — Həzi Aslanov, Əhmədli, Qara Qarayev
+3. **Qiymət filteri**: Elanın qiyməti `price_min` və `price_max` arasında olmalıdır (170,000 – 190,000 AZN)
+4. **Sahə filteri**: Elanın sahəsi `area_min` və `area_max` arasında olmalıdır (65 – 80 m²). Sahəsi oxunmayan elan da keçmir (`fail_area_unknown` kimi loglanır)
 
-Ərazi analizi transliterasiya variantlarını da dəstəkləyir (məs. Atatürk = Ataturk, Nərimanov = Nerimanov).
+**Filtr olmayanlar:** otaq sayı (1-dən 2-yə düzəldilmiş, 2 və ya 3 otaq — fərqi yoxdur), mərtəbə/tikili (köhnə və yeni hamısı keçir).
+
+**Soft (yalnız loglanır, bloklamır):** kupça/çıxarış.
+
+Ərazi analizi transliterasiya variantlarını da dəstəkləyir (məs. Əhmədli = Ehmedli = Ahmadli, Qara Qarayev = Gara Garayev).
 
 ## Köhnə Elan Niyə Təkrar Gəlmir?
 
